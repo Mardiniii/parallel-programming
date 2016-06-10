@@ -31,6 +31,8 @@ void mm(void) {
   int i,j,k;
   double sum;
 
+
+
   for (i = 0; i < matrixSize; i++) {
     for (j = 0; j < matrixSize; j++) {
       sum = 0.0;
@@ -40,6 +42,11 @@ void mm(void) {
       c[i][j] = sum;
     }
   }
+
+
+
+
+
 }
 void printResult(void){
   int i, j;
