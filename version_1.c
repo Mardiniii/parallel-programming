@@ -1,20 +1,15 @@
 //Matrix multiplication
-
+// Call pthread.h library
+#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
 
-#define NUM_THREADS 10 //Define number of threads to use around the program
+// Define number of threads
+#define NUM_THREADS     5
 
 double **a, **b, **c;
 int matrixSize;
-
-struct v {
-   int i; /* row */
-   int j; /* column */
-};
-
-void *runner(void *param); /* Function to control thread for multiplication */
 
 double **allocateMatrix() {
   int i;
@@ -46,7 +41,6 @@ void mm(void) {
     }
   }
 }
-
 void printResult(void){
   int i, j;
   for(i=0;i<matrixSize;i++){
