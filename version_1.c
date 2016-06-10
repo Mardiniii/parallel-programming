@@ -12,6 +12,8 @@ struct v {
    int j; /* column */
 };
 
+void *runner(void *param); /* Function to control thread for multiplication */
+
 double **allocateMatrix() {
   int i;
   double *vals, **temp;
