@@ -4,6 +4,8 @@
 #include <stdlib.h>
 #include <time.h>
 
+#define NUM_THREADS 10 //Define number of threads to use around the program
+
 double **a, **b, **c;
 int matrixSize;
 
