@@ -6,7 +6,7 @@
 #include <time.h>
 
 // Define number of threads
-#define NUM_THREADS     5
+#define NUM_THREADS     4
 
 double **a, **b, **c;
 int matrixSize;
@@ -27,13 +27,13 @@ double **allocateMatrix() {
   return temp;
 }
 
-void mm(void) {
-  int i,j,k;
+void *thread_operation(void *row) {
+  int j,k,i;
   double sum;
-
-
-
-  for (i = 0; i < matrixSize; i++) {
+  long initial_row;
+  initial_row = (long)row;
+  printf("Hola soy el Thread #%ld, multiplicando la fila #%ld!\n", initial_row, initial_row );
+  for (i = initial_row; i < initial_row + 1; i++) {
     for (j = 0; j < matrixSize; j++) {
       sum = 0.0;
       for (k = 0; k < matrixSize; k++) {
@@ -42,12 +42,40 @@ void mm(void) {
       c[i][j] = sum;
     }
   }
-
-
-
-
-
+  pthread_exit(NULL);
 }
+
+void mm(void) {
+  int i,j,k,rc;
+  double sum;
+  void *status;
+
+  pthread_t threads[NUM_THREADS];
+  pthread_attr_t attr;
+  long t;
+  /* Initialize and set thread detached attribute */
+  pthread_attr_init(&attr);
+  pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
+
+  for(t=0; t<NUM_THREADS; t++){
+    rc = pthread_create(&threads[t], &attr, thread_operation,(void *)t);
+    if (rc){
+      printf("ERROR; return code from pthread_create() is %d\n", rc);
+      exit(-1);
+    }
+  }
+
+  /* Free attribute and wait for the other threads */
+  pthread_attr_destroy(&attr);
+  for(t=0; t<NUM_THREADS; t++) {
+    rc = pthread_join(threads[t], &status);
+    if (rc) {
+      printf("ERROR; return code from pthread_join() is %d\n", rc);
+      exit(-1);
+    }
+  }
+}
+
 void printResult(void){
   int i, j;
   for(i=0;i<matrixSize;i++){
