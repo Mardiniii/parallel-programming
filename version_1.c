@@ -2,7 +2,7 @@
 // Ingenieria Electrónica - C.C: 1.017.172.854
 // Arquitectura Avanzada de Computadores 2016-1
 
-//Matrix multiplication
+// Matrix multiplication - Versión 1
 // Call pthread.h library
 #include <pthread.h>
 #include <stdio.h>
