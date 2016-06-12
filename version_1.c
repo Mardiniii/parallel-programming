@@ -10,7 +10,7 @@
 #include <time.h>
 
 // Define number of threads
-#define NUM_THREADS     4
+#define NUM_THREADS     8
 
 // Thread Data structure to setup/pass multiple arguments via this structure. Each thread receives a unique instance of the structure.
 struct thread_data{
@@ -197,7 +197,8 @@ int main(void) {
 
   printf("Loading %d pairs of square matrices of size %d from %s...\n", nmats, matrixSize, fname);
   clock_t start = clock();
-  for(k=0;k<nmats;k++){
+  // Change nmats by one 'cause we only want to test one product multiplication for this excercise
+  for(k=0;k<1;k++){
     for(i=0;i<matrixSize;i++){
       for(j=0;j<matrixSize;j++){
         fscanf(fh, "%lf", &a[i][j]);
