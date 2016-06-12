@@ -1,3 +1,7 @@
+// Sebastian Zapata Mardini
+// Ingenieria Electrónica - C.C: 1.017.172.854
+// Arquitectura Avanzada de Computadores 2016-1
+
 //Matrix multiplication
 // Call pthread.h library
 #include <pthread.h>
@@ -8,43 +12,48 @@
 // Define number of threads
 #define NUM_THREADS     4
 
+// Thread Data structure to setup/pass multiple arguments via this structure. Each thread receives a unique instance of the structure.
 struct thread_data{
    int thread_id;
    int initial_row;
    int final_row;
 };
 
+// Array to management all the threads with specific information for each of them
 struct thread_data thread_data_array[NUM_THREADS];
 
+// Matrix definition
 double **a, **b, **c;
 int matrixSize;
 
 double **allocateMatrix() {
   int i;
   double *vals, **temp;
-
   // allocate space for values
   vals = (double *) malloc (matrixSize * matrixSize * sizeof(double));
-
   // allocate vector of pointers
   temp = (double **) malloc (matrixSize * sizeof(double*));
-
   for(i=0; i < matrixSize; i++)
     temp[i] = &(vals[i * matrixSize]);
-
   return temp;
 }
 
+// Thread operation is a function created to controll the process for each thread, in this function each thread has to operate form an initial row to a final row, in order to calculate a block from the matrix multiplication operation
 void *thread_operation(void *threadarg) {
+  // Local variables to control the loops
   int j,k,i,initial_row,final_row;
+  // Struct with the information from the current thread
   struct thread_data *my_data;
   long t_id;
   double sum;
+  // Call the especific information from the thread
   my_data = (struct thread_data *) threadarg;
   t_id = my_data->thread_id;
   initial_row = my_data->initial_row;
   final_row = my_data->final_row;
+  // Debug message for development enviroment - Local tests
   printf("Hola soy el Thread #%ld, multiplicando desde la fila #%d hasta la fila #%d!\n", t_id, initial_row, final_row);
+  // Iterate from the initial row to the final row from the current thread
   for (i = initial_row; i < final_row; i++) {
     for (j = 0; j < matrixSize; j++) {
       sum = 0.0;
@@ -57,6 +66,7 @@ void *thread_operation(void *threadarg) {
   pthread_exit(NULL);
 }
 
+// The sequential function given with the initial code in order to be run when the developer define one thread
 void mm(void) {
   int i,j,k;
   double sum;
@@ -72,11 +82,14 @@ void mm(void) {
   }
 }
 
+// This is the parallel matrix multiplication function
 void parallel_multiplication(void) {
+  // Local variables to control loops and steps inside the matrix
   int i,j,k,rc,step;
   double sum;
   long t;
   void *status;
+  // Create threads as documents given with the initial code
   pthread_t threads[NUM_THREADS];
   pthread_attr_t attr;
   /* Initialize and set thread detached attribute */
@@ -84,12 +97,17 @@ void parallel_multiplication(void) {
   pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
 
 
-  // First case when the number of threads is equal to one
+  // After we have the threads we going to evaluate three special cases
+  // 1. When the number of threads is equal to one
+  // 2. When the matrix size is exactly divisible by the number of threads
+  // 3. When the matrix size is not exactly divisible by the number of threads and we need to do special considerations
+  // Case 1
   if( NUM_THREADS == 1 ) {
+    // Run the normal matrix multiplication function
     mm();
-  // Second case when the matrix size is exactly divisible by the number of threads
-  }
-  if ( (matrixSize % NUM_THREADS) == 0 ) {
+  // Case 2
+  } else if ( (matrixSize % NUM_THREADS) == 0 ) {
+    // Assign and step to divide the matrix. Each thread will receive the same amount of rows in order to complete the operations
     step = matrixSize/NUM_THREADS;
     for(t=0; t<NUM_THREADS; t++){
       thread_data_array[t].thread_id = t;
@@ -103,6 +121,7 @@ void parallel_multiplication(void) {
     }
     /* Free attribute and wait for the other threads */
     pthread_attr_destroy(&attr);
+    // Wait for the work of all the threads with the join and continue
     for(t=0; t<NUM_THREADS; t++) {
       rc = pthread_join(threads[t], &status);
       if (rc) {
@@ -110,8 +129,9 @@ void parallel_multiplication(void) {
         exit(-1);
       }
     }
-  // Case when the matrix size is not exactly divisible by the number of threads
+  // Case 3
   } else {
+    // In this case the amount of rows for each thread is not the same, we save the NUM_THREADS-1 thread to process the rest of the files and finis the operations
     step = matrixSize/NUM_THREADS;
     printf("***************\n");
     printf("%d\n", step);
@@ -127,7 +147,7 @@ void parallel_multiplication(void) {
       }
     }
     // The size of the step doesn't divide exactly the matrix size, for this reason the number of operations is not equal for all the threads
-    // Let's call the las thread for the rest of the files
+    // Let's call and assing the work for the las thread to process the rest of the rows
     thread_data_array[NUM_THREADS-1].thread_id = NUM_THREADS-1;
     thread_data_array[NUM_THREADS-1].initial_row = thread_data_array[NUM_THREADS-2].final_row;
     thread_data_array[NUM_THREADS-1].final_row = matrixSize;
@@ -138,6 +158,7 @@ void parallel_multiplication(void) {
     }
     /* Free attribute and wait for the other threads */
     pthread_attr_destroy(&attr);
+    // Wait for the work of all the threads with the join and continue
     for(t=0; t<NUM_THREADS; t++) {
       rc = pthread_join(threads[t], &status);
       if (rc) {
