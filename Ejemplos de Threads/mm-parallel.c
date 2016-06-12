@@ -21,6 +21,7 @@ void *runner(void *param); /* the thread */
 int main(int argc, char *argv[]) {
 
    int i,j, count = 0;
+   clock_t start = clock();
    for(i = 0; i < M; i++) {
       for(j = 0; j < N; j++) {
          //Assign a row and column for each thread
@@ -35,10 +36,15 @@ int main(int argc, char *argv[]) {
          //Create the thread
          pthread_create(&tid,&attr,runner,data);
          //Make sure the parent waits for all thread to complete
-         pthread_join(tid, NULL);
+         // pthread_join(tid, NULL);
          count++;
       }
    }
+   clock_t end = clock();
+   printf("************* \n");
+   double time_elapsed_in_seconds = (end - start)/(double)CLOCKS_PER_SEC;
+   printf("The time for the operation was %f \n", time_elapsed_in_seconds);
+   printf("************* \n");
 
    //Print out the resulting matrix
    for(i = 0; i < M; i++) {

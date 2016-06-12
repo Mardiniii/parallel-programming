@@ -37,6 +37,7 @@ void mm(void) {
 		}
 	}
 }
+
 void printResult(void){
 	int i, j;
 	for(i=0;i<matrixSize;i++){
