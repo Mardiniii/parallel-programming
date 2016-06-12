@@ -6,7 +6,7 @@
 #include <time.h>
 
 // Define number of threads
-#define NUM_THREADS     10
+#define NUM_THREADS     4
 
 struct thread_data{
    int thread_id;
@@ -83,12 +83,13 @@ void parallel_multiplication(void) {
   pthread_attr_init(&attr);
   pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
 
-  // Asignar hilos como filas tenga la matriz
-  // numero de filas/numero de threads
+
   // First case when the number of threads is equal to one
   if( NUM_THREADS == 1 ) {
     mm();
-  } else if ( (matrixSize % NUM_THREADS) == 0 ) {
+  // Second case when the matrix size is exactly divisible by the number of threads
+  }
+  if ( (matrixSize % NUM_THREADS) == 0 ) {
     step = matrixSize/NUM_THREADS;
     for(t=0; t<NUM_THREADS; t++){
       thread_data_array[t].thread_id = t;
@@ -99,6 +100,41 @@ void parallel_multiplication(void) {
         printf("ERROR; return code from pthread_create() is %d\n", rc);
         exit(-1);
       }
+    }
+    /* Free attribute and wait for the other threads */
+    pthread_attr_destroy(&attr);
+    for(t=0; t<NUM_THREADS; t++) {
+      rc = pthread_join(threads[t], &status);
+      if (rc) {
+        printf("ERROR; return code from pthread_join() is %d\n", rc);
+        exit(-1);
+      }
+    }
+  // Case when the matrix size is not exactly divisible by the number of threads
+  } else {
+    step = matrixSize/NUM_THREADS;
+    printf("***************\n");
+    printf("%d\n", step);
+    printf("***************\n");
+    for(t=0; t<NUM_THREADS-1; t++){
+      thread_data_array[t].thread_id = t;
+      thread_data_array[t].initial_row = t * step;
+      thread_data_array[t].final_row = (t+1)*step;
+      rc = pthread_create(&threads[t], &attr, thread_operation,(void *) &thread_data_array[t]);
+      if (rc){
+        printf("ERROR; return code from pthread_create() is %d\n", rc);
+        exit(-1);
+      }
+    }
+    // The size of the step doesn't divide exactly the matrix size, for this reason the number of operations is not equal for all the threads
+    // Let's call the las thread for the rest of the files
+    thread_data_array[NUM_THREADS-1].thread_id = NUM_THREADS-1;
+    thread_data_array[NUM_THREADS-1].initial_row = thread_data_array[NUM_THREADS-2].final_row;
+    thread_data_array[NUM_THREADS-1].final_row = matrixSize;
+    rc = pthread_create(&threads[NUM_THREADS-1], &attr, thread_operation,(void *) &thread_data_array[NUM_THREADS-1]);
+    if (rc){
+      printf("ERROR; return code from pthread_create() is %d\n", rc);
+      exit(-1);
     }
     /* Free attribute and wait for the other threads */
     pthread_attr_destroy(&attr);
@@ -151,7 +187,6 @@ int main(void) {
         fscanf(fh, "%lf", &b[i][j]);
       }
     }
-
     printf("Multiplying two matrices...\n");
     parallel_multiplication();
     printResult();
