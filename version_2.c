@@ -12,11 +12,17 @@
 // Define number of threads
 #define NUM_THREADS     2
 
+// Matrix structure to load data before operate
+struct  matrix_data  {
+  int  id;
+  double  **matrix_a;
+  double  **matrix_b;
+  double  **matrix_c;
+};
+
 // Thread Data structure to setup/pass multiple arguments via this structure. Each thread receives a unique instance of the structure.
 struct thread_data{
    int thread_id;
-   double **matrix_a;
-   double **matrix_b;
 };
 
 // Array to management all the threads with specific information for each of them
@@ -42,7 +48,7 @@ double **allocateMatrix() {
   return temp;
 }
 
-void *parallel_multiplication(void *threadid) {
+void *parallel_multiplication(void *threadarg) {
   int i,j,k;
   double sum;
   for (i = 0; i < matrixSize; i++) {
@@ -119,6 +125,12 @@ int main(void) {
   // Case 2
   } else if ( (matrixSize % NUM_THREADS) == 0 ) {
     for(t=0; t<NUM_THREADS; t++){
+
+
+
+
+
+
       rc = pthread_create(&threads[t], &attr, thread_operation,(void *) &thread_data_array[t]);
       if (rc){
         printf("ERROR; return code from pthread_create() is %d\n", rc);
