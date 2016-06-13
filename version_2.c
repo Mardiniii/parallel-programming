@@ -15,15 +15,13 @@
 // Matrix structure to load data before operate
 struct  matrix_data  {
   int  id;
+  int thread_id;
   double  **matrix_a;
   double  **matrix_b;
   double  **matrix_c;
 };
 
-struct matrix_data operation[50]
-
-// Array to management all the threads with specific information for each of them
-struct thread_data thread_data_array[NUM_THREADS];
+struct matrix_data operation[50];
 
 // Matrix definition
 double **a, **b, **c;
@@ -45,20 +43,21 @@ double **allocateMatrix() {
   return temp;
 }
 
-void *parallel_multiplication(void *threaid, void *my_operation) {
+void *parallel_multiplication(void *my_operation) {
   int i,j,k;
   double sum;
-  long tid;
-  tid = (long)threadid;
-  struct matrix_data *my_operation;
-  my_operation = (struct matrix_data *) my_operation;
+  long tid, operation_id;
+  struct matrix_data *my_data;
+  my_data = (struct matrix_data *) my_operation;
+  operation_id = my_data->id;
+  tid = my_data->thread_id;
   for (i = 0; i < matrixSize; i++) {
     for (j = 0; j < matrixSize; j++) {
       sum = 0.0;
       for (k = 0; k < matrixSize; k++) {
-        sum = sum + my_operation.matrix_a[i][k] * my_operation.matrix_b[i][k];
+        sum = sum + my_data->matrix_a[i][k] * my_data->matrix_b[i][k];
       }
-      my_operation.matrix_c[i][k] = sum;
+      operation[operation_id].matrix_c[i][k] = sum;
     }
   }
   pthread_exit(NULL);
@@ -78,32 +77,33 @@ void mm(void) {
   }
 }
 
-void printResult(void){
-  int i, j;
-  for(i=0;i<matrixSize;i++){
-    for(j=0;j<matrixSize;j++){
-      printf("%lf ", c[i][j]);
-    }
-    printf("\n");
-  }
-}
+// void printResult(void){
+//   int i, j;
+//   for(i=0;i<matrixSize;i++){
+//     for(j=0;j<matrixSize;j++){
+//       printf("%lf ", c[i][j]);
+//     }
+//     printf("\n");
+//   }
+// }
 
 void printResult(void *my_operation){
   int i, j;
-  struct matrix_data *my_operation;
-  my_operation = (struct matrix_data *) my_operation;
+  struct matrix_data *my_data;
+  my_data = (struct matrix_data *) my_operation;
   for(i=0;i<matrixSize;i++){
     for(j=0;j<matrixSize;j++){
-      printf("%lf ", my_operation->matrix_c[i][j]);
+      printf("%lf ", my_data->matrix_c[i][j]);
     }
     printf("\n");
   }
 }
 
 int main(void) {
-  int i, j, k, t, operation_counter = 0;
+  int i, j, k, operation_counter = 0;
+  long t;
   int nmats;
-  char *fname = "matrices_test.dat"; //Change to matrices_large.dat for performance evaluation
+  char *fname = "matrices_large.dat"; //Change to matrices_large.dat for performance evaluation
   FILE *fh;
 
   printf("Start\n");
@@ -127,6 +127,7 @@ int main(void) {
   printf("Loading %d matrices on structure from %s...\n", nmats, fname);
   clock_t start = clock();
   for(k=0;k<nmats;k++){
+    operation[k].id = k;
     for(i=0;i<matrixSize;i++){
       for(j=0;j<matrixSize;j++){
         fscanf(fh, "%lf", &operation[k].matrix_a[i][j]);
@@ -138,9 +139,11 @@ int main(void) {
       }
     }
   }
+
   // Create threads as documents given with the initial code
   void *status;
   pthread_t threads[NUM_THREADS];
+  int rc;
   pthread_attr_t attr;
   /* Initialize and set thread detached attribute */
   pthread_attr_init(&attr);
@@ -158,7 +161,8 @@ int main(void) {
   } else if ( (matrixSize % NUM_THREADS) == 0 ) {
     while( operation_counter < nmats){
       for(t=0; t<NUM_THREADS; t++){
-        rc = pthread_create(&threads[t], &attr, parallel_multiplication,(void *)t, (void *) &operation[operation_counter]);
+        operation[operation_counter].thread_id = t;
+        rc = pthread_create(&threads[t], &attr, parallel_multiplication,(void *) &operation[operation_counter]);
         if (rc){
           printf("ERROR; return code from pthread_create() is %d\n", rc);
           exit(-1);
