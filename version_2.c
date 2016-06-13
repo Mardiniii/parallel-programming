@@ -84,12 +84,16 @@ void *thread_operation(void *threadid) {
         sum = sum + a[i][k] * b[k][j];
       }
       matrix_result[operation_counter].matrix_c[i][j] = sum;
-      // c[i][j] = sum;
     }
   }
 
+
   printf("Multiplying two matrices...\n");
   pthread_mutex_lock( &mutex_matrix_multiplication );
+  printf("************* \n");
+  printf("Operation Counter value is: %d \n", operation_counter);
+  printf("************* \n");
+  printResult(operation_counter);
   operation_counter++;
   pthread_mutex_unlock( &mutex_matrix_multiplication );
 
@@ -116,7 +120,6 @@ int main(void) {
     printf("Creating result matrix #%d\n", k+1);
     matrix_result[k].matrix_c=allocateMatrix();
   }
-  printResult(49);
 
   clock_t start = clock();
   step = nmats%NUM_THREADS;
