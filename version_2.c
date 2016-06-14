@@ -9,7 +9,7 @@
 #include <time.h>
 
 // Define number of threads
-#define NUM_THREADS     4
+#define NUM_THREADS     2
 
 // Thread Data structure to setup/pass multiple arguments via this structure. Each thread receives a unique instance of the structure.
 struct thread_data{
@@ -21,6 +21,9 @@ struct thread_data{
 
 // Array to management all the threads with specific information for each of them
 struct thread_data thread_data_array[NUM_THREADS];
+
+// Add mutex
+pthread_mutex_t mutexcounter;
 
 double **a, **b, **c;
 int matrixSize;
@@ -43,51 +46,52 @@ double **allocateMatrix() {
 }
 
 // Thread operation is a function created to controll the process for each thread, in this function each thread has to operate form an initial row to a final row, in order to calculate a block from the matrix multiplication operation
-void *thread_operation(void *threadarg) {
+void *thread_operation(void *threadid) {
   // Local variables to control the loops
   int j,k,i;
   // Struct with the information from the current thread
-  struct thread_data *my_data;
   long t_id;
   double sum;
   // Call the especific information from the thread
-  my_data = (struct thread_data *) threadarg;
-  t_id = my_data->thread_id;
+  t_id = (long)threadid;
   // Debug message for development enviroment - Local tests
-  printf("Hola soy el Thread #%ld, multiplicando desde la fila #%d hasta la fila #%d!\n", t_id, initial_row, final_row);
+  printf("Hola soy el Thread #%ld,", t_id);
   // Iterate from the initial row to the final row from the current thread
   for (i = 0; i < matrixSize; i++) {
     for (j = 0; j < matrixSize; j++) {
       sum = 0.0;
       for (k = 0; k < matrixSize; k++) {
-        sum = sum + my_data->matrix_a[i][k] * my_data->matrix_b[i][k];
+        sum = sum + thread_data_array[t_id].matrix_a[i][k] * thread_data_array[t_id].matrix_b[k][j];
       }
       thread_data_array[t_id].matrix_c[i][j] = sum;
     }
   }
+  pthread_mutex_lock (&mutexcounter);
+  operation_counter++;
+  pthread_mutex_unlock (&mutexcounter);
   pthread_exit(NULL);
 }
 
-void mm(void) {
-  int i,j,k;
-  double sum;
+// void mm(void) {
+//   int i,j,k;
+//   double sum;
 
-  for (i = 0; i < matrixSize; i++) {
-    for (j = 0; j < matrixSize; j++) {
-      sum = 0.0;
-      for (k = 0; k < matrixSize; k++) {
-        sum = sum + a[i][k] * b[k][j];
-      }
-      c[i][j] = sum;
-    }
-  }
-}
+//   for (i = 0; i < matrixSize; i++) {
+//     for (j = 0; j < matrixSize; j++) {
+//       sum = 0.0;
+//       for (k = 0; k < matrixSize; k++) {
+//         sum = sum + a[i][k] * b[k][j];
+//       }
+//       c[i][j] = sum;
+//     }
+//   }
+// }
 
-void printResult(void){
+void printResult(int t_id){
   int i, j;
   for(i=0;i<matrixSize;i++){
     for(j=0;j<matrixSize;j++){
-      printf("%lf ", c[i][j]);
+      printf("%lf ", thread_data_array[t_id].matrix_b[i][j]);
     }
     printf("\n");
   }
@@ -107,17 +111,21 @@ int main(void) {
 
   long t;
   void *status;
+  int rc;
   // Create threads as documents given with the initial code
   pthread_t threads[NUM_THREADS];
+  // Define thread attributes by default
   pthread_attr_t attr;
+  // Initialize mutex
+  // pthread_mutex_init(&mutexcounter, NULL);
   /* Initialize and set thread detached attribute */
   pthread_attr_init(&attr);
-  pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
 
-  //Dynamically create matrices of the size needed
-  a = allocateMatrix();
-  b = allocateMatrix();
-  c = allocateMatrix();
+  for(k=0;k<NUM_THREADS;k++){
+    thread_data_array[k].matrix_a=allocateMatrix();
+    thread_data_array[k].matrix_b=allocateMatrix();
+    thread_data_array[k].matrix_c=allocateMatrix();
+  }
 
   printf("Loading %d pairs of square matrices of size %d from %s...\n", nmats, matrixSize, fname);
   clock_t start = clock();
@@ -125,6 +133,7 @@ int main(void) {
   if ( (nmats % NUM_THREADS) == 0 ) {
       // Assign and step to divide the matrix. Each thread will receive the same amount of rows in order to complete the operations
     while(operate==1){
+      pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
       for(t=0; t<NUM_THREADS; t++){
         // Load a and b matrices from file for each thread
         for(i=0;i<matrixSize;i++){
@@ -141,7 +150,8 @@ int main(void) {
         // mm();
         // printResult();
         thread_data_array[t].thread_id = t;
-        rc = pthread_create(&threads[t], &attr, thread_operation,(void *) &thread_data_array[t]);
+        printf("Hola antes de morir thread #%ld\n",t);
+        rc = pthread_create(&threads[t], &attr, thread_operation,(void *) t);
         if (rc){
           printf("ERROR; return code from pthread_create() is %d\n", rc);
           exit(-1);
@@ -161,28 +171,7 @@ int main(void) {
         operate = 0;
       }
     }
-    // Case 3
-
-
-    } else {
-      // In this case the amount of rows for each thread is not the same, we save the NUM_THREADS-1 thread to process the rest of the files and finis the operations
-      step = matrixSize/NUM_THREADS;
-      printf("***************\n");
-      printf("%d\n", step);
-      printf("***************\n");
-      for(t=0; t<NUM_THREADS-1; t++){
-        thread_data_array[t].thread_id = t;
-        thread_data_array[t].initial_row = t * step;
-        thread_data_array[t].final_row = (t+1)*step;
-        rc = pthread_create(&threads[t], &attr, thread_operation,(void *) &thread_data_array[t]);
-        if (rc){
-          printf("ERROR; return code from pthread_create() is %d\n", rc);
-          exit(-1);
-        }
-      }
-
-
-
+  }
   clock_t end = clock();
   printf("************* \n");
   double time_elapsed_in_seconds = (end - start)/(double)CLOCKS_PER_SEC;
@@ -190,13 +179,17 @@ int main(void) {
   printf("************* \n");
   fclose(fh);
 
-  // Free memory
-  free(*a);
-  free(a);
-  free(*b);
-  free(b);
-  free(*c);
-  free(c);
+  // // Free memory
+  for(k=0;k<nmats;k++){
+    free(*thread_data_array[t].matrix_a);
+    free(thread_data_array[t].matrix_a);
+    free(*thread_data_array[t].matrix_b);
+    free(thread_data_array[t].matrix_b);
+    free(*thread_data_array[t].matrix_c);
+    free(thread_data_array[t].matrix_c);
+  }
   printf("Done.\n");
+  pthread_mutex_destroy(&mutexcounter);pthread_exit(NULL);
+  // pthread_exit(NULL);
   return 0;
 }
