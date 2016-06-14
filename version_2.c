@@ -64,6 +64,7 @@ void *thread_operation(void *threadid) {
 
   printf("Start\n");
   fh = fopen(fname, "r");
+
   //First line indicates how many pairs of matrices there are and the matrix size
   a = allocateMatrix();
   b = allocateMatrix();
@@ -90,9 +91,9 @@ void *thread_operation(void *threadid) {
 
   printf("Multiplying two matrices...\n");
   pthread_mutex_lock( &mutex_matrix_multiplication );
-  printf("************* \n");
+
   printf("Operation Counter value is: %d \n", operation_counter);
-  printf("************* \n");
+
   printResult(operation_counter);
   operation_counter++;
   pthread_mutex_unlock( &mutex_matrix_multiplication );
@@ -131,6 +132,25 @@ int main(void) {
     pthread_mutex_init(&mutex_matrix_multiplication, NULL);
     pthread_attr_init(&attr);
     pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
+
+    for(t=0; t<NUM_THREADS; t++){
+      rc = pthread_create(&threads[t], &attr, thread_operation,(void *)t);
+      if (rc){
+        printf("ERROR; return code from pthread_create() is %d\n", rc);
+        exit(-1);
+      }
+    }
+    /* Free attribute and wait for the other threads */
+    pthread_attr_destroy(&attr);
+    // Wait for the work of all the threads with the join and continue
+    for(t=0; t<NUM_THREADS; t++) {
+      rc = pthread_join(threads[t], &status);
+      if (rc) {
+        printf("ERROR; return code from pthread_join() is %d\n", rc);
+        exit(-1);
+      }
+    }
+
     if (operation_counter == (50-step) ) {
       for(t=0; t<step; t++){
         rc = pthread_create(&threads[t], &attr, thread_operation,(void *)t);
@@ -150,24 +170,6 @@ int main(void) {
         }
       }
       operate = 0;
-    } else {
-      for(t=0; t<NUM_THREADS; t++){
-        rc = pthread_create(&threads[t], &attr, thread_operation,(void *)t);
-        if (rc){
-          printf("ERROR; return code from pthread_create() is %d\n", rc);
-          exit(-1);
-        }
-      }
-      /* Free attribute and wait for the other threads */
-      pthread_attr_destroy(&attr);
-      // Wait for the work of all the threads with the join and continue
-      for(t=0; t<NUM_THREADS; t++) {
-        rc = pthread_join(threads[t], &status);
-        if (rc) {
-          printf("ERROR; return code from pthread_join() is %d\n", rc);
-          exit(-1);
-        }
-      }
     }
   }
   clock_t end = clock();
