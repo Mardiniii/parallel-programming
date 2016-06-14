@@ -9,7 +9,7 @@
 #include <time.h>
 
 // Define number of threads
-#define NUM_THREADS     8
+#define NUM_THREADS     4
 
 // Thread Data structure to setup/pass multiple arguments via this structure. Each thread receives a unique instance of the structure.
 struct thread_data{
@@ -77,15 +77,69 @@ int main(void) {
   //First line indicates how many pairs of matrices there are and the matrix size
   fscanf(fh, "%d %d\n", &nmats, &matrixSize);
 
+  long t;
+  void *status;
+  // Create threads as documents given with the initial code
+  pthread_t threads[NUM_THREADS];
+  pthread_attr_t attr;
+  /* Initialize and set thread detached attribute */
+  pthread_attr_init(&attr);
+  pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
+
   //Dynamically create matrices of the size needed
   a = allocateMatrix();
   b = allocateMatrix();
   c = allocateMatrix();
 
-
-
   printf("Loading %d pairs of square matrices of size %d from %s...\n", nmats, matrixSize, fname);
   clock_t start = clock();
+
+  if ( (matrixSize % NUM_THREADS) == 0 ) {
+
+      // Assign and step to divide the matrix. Each thread will receive the same amount of rows in order to complete the operations
+      for(t=0; t<NUM_THREADS; t++){
+        thread_data_array[t].thread_id = t;
+        thread_data_array[t].initial_row = t * step;
+        thread_data_array[t].final_row = (t+1)*step;
+        rc = pthread_create(&threads[t], &attr, thread_operation,(void *) &thread_data_array[t]);
+        if (rc){
+          printf("ERROR; return code from pthread_create() is %d\n", rc);
+          exit(-1);
+        }
+      }
+      /* Free attribute and wait for the other threads */
+      pthread_attr_destroy(&attr);
+      // Wait for the work of all the threads with the join and continue
+      for(t=0; t<NUM_THREADS; t++) {
+        rc = pthread_join(threads[t], &status);
+        if (rc) {
+          printf("ERROR; return code from pthread_join() is %d\n", rc);
+          exit(-1);
+        }
+      }
+    // Case 3
+
+
+    } else {
+      // In this case the amount of rows for each thread is not the same, we save the NUM_THREADS-1 thread to process the rest of the files and finis the operations
+      step = matrixSize/NUM_THREADS;
+      printf("***************\n");
+      printf("%d\n", step);
+      printf("***************\n");
+      for(t=0; t<NUM_THREADS-1; t++){
+        thread_data_array[t].thread_id = t;
+        thread_data_array[t].initial_row = t * step;
+        thread_data_array[t].final_row = (t+1)*step;
+        rc = pthread_create(&threads[t], &attr, thread_operation,(void *) &thread_data_array[t]);
+        if (rc){
+          printf("ERROR; return code from pthread_create() is %d\n", rc);
+          exit(-1);
+        }
+      }
+
+
+
+
   for(k=0;k<nmats;k++){
     for(i=0;i<matrixSize;i++){
       for(j=0;j<matrixSize;j++){
