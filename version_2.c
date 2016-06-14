@@ -8,7 +8,7 @@
 #include <time.h>
 
 // Define number of threads
-#define NUM_THREADS     8
+#define NUM_THREADS     5
 
 // Thread Data structure to setup/pass multiple arguments via this structure. Each thread receives a unique instance of the structure with matrix a and b
 struct operation_data{

@@ -66,7 +66,7 @@ int main(void) {
 
   printf("Loading %d pairs of square matrices of size %d from %s...\n", nmats, matrixSize, fname);
   clock_t start = clock();
-  for(k=0;k<nmats;k++){
+  for(k=0;k<25;k++){
     for(i=0;i<matrixSize;i++){
       for(j=0;j<matrixSize;j++){
         fscanf(fh, "%lf", &a[i][j]);
